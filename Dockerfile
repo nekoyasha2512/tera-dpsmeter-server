@@ -1,8 +1,8 @@
-# A Dockerfile for Render
-# 降級使用最相容舊版專案的 PHP 7.4 映像檔
+#A Dockerfile for Render
+# 使用最相容舊版專案的 PHP 7.4 映像檔
 FROM php:7.4-fpm-alpine as base
 
-# 安裝舊版專案所需的系統依賴與 PHP 擴充功能
+# 安裝系統基本依賴
 RUN apk add --no-cache \
     git \
     unzip \
@@ -21,13 +21,13 @@ WORKDIR /var/www
 # 複製專案檔案
 COPY . .
 
-# 執行安裝指令，並強制加上 --no-scripts 避免舊版 Laravel 提前報錯
+# 執行安裝指令，並妥善處理資料夾建立與解壓縮警告
 RUN composer install --no-dev -o --no-scripts \
     && cp .env.example .env \
     && php artisan key:generate \
     && mkdir -p public/img/icons \
-    && if [ -f "teradata/icons.zip" ]; then unzip teradata/icons.zip -d public/img/icons/; fi \
-    && if [ -d "teradata/class-icons" ]; then ln -s ../../teradata/class-icons public/img/class-icons; fi
+    && if [ -f "teradata/icons.zip" ]; then unzip -o teradata/icons.zip -d public/img/icons/ || true; fi \
+    && if [ -d "teradata/class-icons" ]; then ln -s ../../teradata/class-icons public/img/class-icons || true; fi
 
 # Render 的 Web Service 埠口對接設定
 EXPOSE 10000
