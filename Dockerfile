@@ -23,13 +23,17 @@ COPY . .
 # 步驟 1：建立基礎設定檔
 RUN cp .env.example .env
 
-# 步驟 2：忽略平台限制強制安裝 Composer 依賴套件
+# 步驟 2：忽略平台限制強制安裝 Composer 依賴套件（排除 dev 工具）
 RUN composer install --no-dev --optimize-autoloader --no-scripts --ignore-platform-reqs
+
+# 新增步驟：用指令直接移除程式碼中寫死的 IdeHelper 開發工具載入，避免報錯
+RUN sed -i "/Barryvdh\\\LaravelIdeHelper/d" config/app.php || true
+RUN sed -i "/IdeHelperServiceProvider/d" app/Providers/AppServiceProvider.php || true
 
 # 步驟 3：產生金鑰
 RUN php artisan key:generate
 
-# 步驟 4：處理圖標解壓縮（獨立執行，絕對不影響前後步驟）
+# 步驟 4：處理圖標解壓縮
 RUN mkdir -p public/img/icons
 RUN if [ -f "teradata/icons.zip" ]; then unzip -o teradata/icons.zip -d public/img/icons/ || true; fi
 RUN if [ -d "teradata/class-icons" ]; then ln -s ../../teradata/class-icons public/img/class-icons || true; fi
