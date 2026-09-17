@@ -1,4 +1,3 @@
-#A Dockerfile for Render
 # 使用最相容舊版專案的 PHP 7.4 映像檔
 FROM php:7.4-fpm-alpine as base
 
@@ -21,13 +20,19 @@ WORKDIR /var/www
 # 複製專案檔案
 COPY . .
 
-# 執行安裝指令，並妥善處理資料夾建立與解壓縮警告
-RUN composer install --no-dev -o --no-scripts \
-    && cp .env.example .env \
-    && php artisan key:generate \
-    && mkdir -p public/img/icons \
-    && if [ -f "teradata/icons.zip" ]; then unzip -o teradata/icons.zip -d public/img/icons/ || true; fi \
-    && if [ -d "teradata/class-icons" ]; then ln -s ../../teradata/class-icons public/img/class-icons || true; fi
+# 步驟 1：建立基礎設定檔
+RUN cp .env.example .env
+
+# 步驟 2：忽略平台限制強制安裝 Composer 依賴套件
+RUN composer install --no-dev --optimize-autoloader --no-scripts --ignore-platform-reqs
+
+# 步驟 3：產生金鑰
+RUN php artisan key:generate
+
+# 步驟 4：處理圖標解壓縮（獨立執行，絕對不影響前後步驟）
+RUN mkdir -p public/img/icons
+RUN if [ -f "teradata/icons.zip" ]; then unzip -o teradata/icons.zip -d public/img/icons/ || true; fi
+RUN if [ -d "teradata/class-icons" ]; then ln -s ../../teradata/class-icons public/img/class-icons || true; fi
 
 # Render 的 Web Service 埠口對接設定
 EXPOSE 10000
