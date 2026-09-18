@@ -31,7 +31,7 @@ WORKDIR /var/www/html
 # 6. 複製專案檔案並安裝 Composer 依賴套件
 COPY . .
 
-RUN composer install --no-interaction --optimize-autoloader --no-dev
+RUN composer install --no-interaction --optimize-autoloader --no-dev --no-scripts
 
 # 7. 設定 Laravel 相關目錄權限
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
