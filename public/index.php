@@ -1,5 +1,8 @@
 <?php
+// 必須放在最頂端！在任何 Composer 或 Framework 載入之前關閉廢棄警告
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
 
+define('LARAVEL_START', microtime(true));
 /**
  * Laravel - A PHP Framework For Web Artisans
  *
