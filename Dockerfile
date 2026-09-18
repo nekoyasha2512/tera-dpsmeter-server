@@ -1,5 +1,5 @@
-# 使用帶有 Apache 的官方 PHP 7.4 映像檔
-FROM php:7.4-apache
+# 使用帶有 Apache 的官方 PHP 8.0 映像檔
+FROM php:8.0-apache
 
 # 1. 安裝系統依賴套件與 PHP 擴充套件 (MySQL PDO, Zip, GD, OPcache 等)
 RUN apt-get update && apt-get install -y \
