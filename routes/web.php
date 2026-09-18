@@ -2,9 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', 'DpsController@overviewPage');
-// 接收 TERA DPS Meter 戰鬥數據的 POST 路由
-Route::post('/dps', 'DpsController@store');
-Route::get('/dps', function () {
-    return response()->json(['status' => 'DPS Server Active']);
+// 首頁 GET 請求顯示網頁
+Route::get('/', function () {
+    return view('welcome');
 });
+
+// 接收 TERA DPS Meter 的 POST 上傳請求（直接對應根目錄）
+Route::post('/', 'DpsController@store');
