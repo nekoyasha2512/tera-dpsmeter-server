@@ -1,44 +1,57 @@
 <?php
 
-use App\Stat;
+use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| contains the "web" middleware group. Now create something great!
-|
-*/
-
-Route::get('/', 'DpsController@overviewPage');
-
-Route::get('/encounter/{stat}', function (Stat $stat) {
-    return view('encounter', ['stat' => $stat]);
-})->name('statDetail');
-
-Route::get('/shared/servertime', function () {
-    return response()->json(['serverTime' => time()]);
-});
 Route::get('/init-db', function () {
-    try {
-        // 動態覆蓋連線設定，確保讀取 Render 環境變數
-        config([
-            'database.connections.mysql.host' => env('DB_HOST'),
-            'database.connections.mysql.port' => env('DB_PORT'),
-            'database.connections.mysql.database' => env('DB_DATABASE'),
-            'database.connections.mysql.username' => env('DB_USERNAME'),
-            'database.connections.mysql.password' => env('DB_PASSWORD'),
-        ]);
+    $host = 'mysql-30976c8f-rneko-tera-dps-database.i.aivencloud.com';
+    $port = 16885;
+    $db   = 'defaultdb';
+    $user = 'avnadmin';
+    $pass = 'AVNS_M21uXaWU19m7ty5wHd9';
 
-        \Artisan::call('config:clear');
-        \Artisan::call('cache:clear');
+    // 1. 先用原生 PHP 測試 TCP 埠號通訊
+    $connection = @fsockopen($host, $port, $errno, $errstr, 5);
+    if (!$connection) {
+        return "<h1>TCP 連線失敗！</h1><p>無法連線至 {$host}:{$port}</p><p>錯誤訊息：{$errstr} ({$errno})</p>";
+    }
+    fclose($connection);
+
+    // 2. 用原生 PDO 測試 Aiven 認證
+    try {
+        $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
+        $pdo = new PDO($dsn, $user, $pass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::MYSQL_ATTR_SSL_CA => true, // 忽略或啟用 SSL
+        ]);
+    } catch (\PDOException $e) {
+        return "<h1>Aiven PDO 連線失敗！</h1><pre>" . $e->getMessage() . "</pre>";
+    }
+
+    // 3. 強制注入至 Laravel PDO 執行 Migration
+    try {
+        // 動態更換框架的預設連線物件
+        \DB::purge('mysql');
+        config([
+            'database.default' => 'mysql',
+            'database.connections.mysql' => [
+                'driver' => 'mysql',
+                'host' => $host,
+                'port' => $port,
+                'database' => $db,
+                'username' => $user,
+                'password' => $pass,
+                'charset' => 'utf8mb4',
+                'collation' => 'utf8mb4_unicode_ci',
+                'prefix' => '',
+                'strict' => false,
+            ]
+        ]);
+        \DB::reconnect('mysql');
+
         \Artisan::call('migrate', ['--force' => true]);
 
-        return '<h1>資料庫建表成功！</h1><pre>' . \Artisan::output() . '</pre>';
+        return '<h1>原生 PDO 與 Migration 均執行成功！</h1><pre>' . \Artisan::output() . '</pre>';
     } catch (\Exception $e) {
-        return '<h1>失敗原因：</h1><pre>' . $e->getMessage() . '</pre>';
+        return "<h1>Laravel Migration 失敗：</h1><pre>" . $e->getMessage() . "</pre>";
     }
 });
