@@ -1,47 +1,49 @@
-# 使用最相容舊版專案的 PHP 7.4 映像檔
-FROM php:7.4-fpm-alpine as base
+# 使用帶有 Apache 的官方 PHP 8.2 映像檔
+FROM php:8.2-apache
 
-# 安裝系統基本依賴
-RUN apk add --no-cache \
+# 1. 安裝系統依賴套件與 PHP 擴充套件 (MySQL PDO, Zip, GD, OPcache 等)
+RUN apt-get update && apt-get install -y \
     git \
-    unzip \
+    curl \
     libpng-dev \
-    libjpeg-turbo-dev \
-    freetype-dev \
-    postgresql-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo pdo_mysql pdo_pgsql gd
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 複製與 PHP 7.4 相容的 Composer 版本
-COPY --from=composer:2.2 /usr/bin/composer /usr/bin/composer
+RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd opcache
 
-WORKDIR /var/www
+# 2. 啟用 Apache mod_rewrite 模組 (Laravel 網址重寫必須)
+RUN a2enmod rewrite
 
-# 複製專案檔案
+# 3. 修改 Apache Document Root 指向 Laravel 的 public 目錄
+ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/conf-available/*.conf
+
+# 4. 安裝 Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# 5. 設定工作目錄
+WORKDIR /var/www/html
+
+# 6. 複製專案檔案並安裝 Composer 依賴套件
 COPY . .
 
-# 步驟 1：建立基礎設定檔
-RUN cp .env.example .env
+RUN composer install --no-interaction --optimize-autoloader --no-dev
 
-# 步驟 2：忽略平台限制強制安裝 Composer 依賴套件（排除 dev 工具）
-RUN composer install --no-dev --optimize-autoloader --no-scripts --ignore-platform-reqs
+# 7. 設定 Laravel 相關目錄權限
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# 步驟 3：用指令直接移除程式碼中寫死的 IdeHelper 開發工具載入，避免報錯
-RUN sed -i "/Barryvdh\\\LaravelIdeHelper/d" config/app.php || true
-RUN sed -i "/IdeHelperServiceProvider/d" app/Providers/AppServiceProvider.php || true
+# 8. 複製並配置啟動腳本 (docker-entrypoint.sh)
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# 🌟 核心修正：直接注入強制 SSL require 與連線設定到舊專案的設定檔中，徹底解決連線拒絕問題
-RUN sed -i "s/'sslmode' => 'prefer'/'sslmode' => 'require'/g" config/database.php || true
-RUN sed -i "s/'charset' => 'utf8'/'charset' => 'utf8', 'sslmode' => 'require'/g" config/database.php || true
+# 暴露 Render 預設的 80 Port
+EXPOSE 80
 
-# 步驟 4：產生金鑰
-RUN php artisan key:generate
-
-# 步驟 5：處理圖標解壓縮
-RUN mkdir -p public/img/icons
-RUN if [ -f "teradata/icons.zip" ]; then unzip -o teradata/icons.zip -d public/img/icons/ || true; fi
-RUN if [ -d "teradata/class-icons" ]; then ln -s ../../teradata/class-icons public/img/class-icons || true; fi
-
-# Render 的 Web Service 埠口對接設定
-EXPOSE 10000
-CMD php artisan serve --host=0.0.0.0 --port=10000
+# 指定 Entrypoint 與預設啟動命令
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["apache2-foreground"]
