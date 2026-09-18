@@ -7,3 +7,5 @@ Route::get('/', function () {
     ]);
 });
 Route::get('/stats', [StatsController::class, 'index']);
+Route::get('/dps', [DpsController::class, 'index']);
+Route::get('/glyph', [GlyphController::class, 'index']);
