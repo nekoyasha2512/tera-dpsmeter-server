@@ -1,5 +1,6 @@
 <?php
 use App\Http\Controllers\StatsController;
+use App\Http\Controllers\DpsController;
 Route::get('/', function () {
     return response()->json([
         'status' => 'online',
@@ -8,4 +9,3 @@ Route::get('/', function () {
 });
 Route::get('/stats', [StatsController::class, 'index']);
 Route::get('/dps', [DpsController::class, 'index']);
-Route::get('/glyph', [GlyphController::class, 'index']);
