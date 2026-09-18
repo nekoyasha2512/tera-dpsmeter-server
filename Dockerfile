@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd opcache
-
+RUN echo "opcache.validate_timestamps=1" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
 # 2. 啟用 Apache mod_rewrite 模組 (Laravel 網址重寫必須)
 RUN a2enmod rewrite
 # 套用 PHP 正式環境設定 (關閉 display_errors)
