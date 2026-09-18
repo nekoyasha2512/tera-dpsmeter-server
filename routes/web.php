@@ -9,18 +9,6 @@ Route::get('/init-db', function () {
     $user = 'avnadmin';
     $pass = 'AVNS_M21uXaWU19m7ty5wHd9';
 
-    // 建立 PDO 連線並關閉 SSL 憑證核對 (ALLOW UNSAFE SSL)
-    try {
-        $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
-        $pdo = new PDO($dsn, $user, $pass, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false, // 停用伺服器憑證嚴格檢查
-        ]);
-    } catch (\PDOException $e) {
-        return "<h1>Aiven PDO 連線失敗！</h1><pre>" . $e->getMessage() . "</pre>";
-    }
-
-    // 注入連線並執行 Migration 建表
     try {
         \DB::purge('mysql');
         config([
@@ -43,9 +31,13 @@ Route::get('/init-db', function () {
         ]);
         \DB::reconnect('mysql');
 
+        // 關鍵：關閉 Aiven 的主鍵強制要求，允許 password_resets 建表
+        \DB::statement('SET SESSION sql_require_primary_key = 0;');
+
+        // 執行 Migration 建表
         \Artisan::call('migrate', ['--force' => true]);
 
-        return '<h1>Aiven 資料庫 Migration 建表成功！</h1><pre>' . \Artisan::output() . '</pre>';
+        return '<h1>恭喜！Aiven 所有資料表建立成功！</h1><pre>' . \Artisan::output() . '</pre>';
     } catch (\Exception $e) {
         return "<h1>Laravel Migration 失敗：</h1><pre>" . $e->getMessage() . "</pre>";
     }
