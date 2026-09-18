@@ -24,20 +24,6 @@ Route::get('/shared/servertime', function () {
 });
 Route::get('/init-db', function () {
     try {
-        // 強制清除快取
-        \Artisan::call('config:clear');
-        \Artisan::call('cache:clear');
-        
-        // 強制執行 Migration 建表
-        \Artisan::call('migrate', ['--force' => true]);
-        
-        return '<h1>資料庫連線與 Migration 成功！</h1><pre>' . \Artisan::output() . '</pre>';
-    } catch (\Exception $e) {
-        return '<h1>失敗原因：</h1><pre>' . $e->getMessage() . '</pre>';
-    }
-});
-Route::get('/init-db', function () {
-    try {
         // 動態覆蓋連線設定，確保讀取 Render 環境變數
         config([
             'database.connections.mysql.host' => env('DB_HOST'),
