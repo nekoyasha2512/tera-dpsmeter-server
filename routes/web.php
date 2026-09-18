@@ -9,27 +9,19 @@ Route::get('/init-db', function () {
     $user = 'avnadmin';
     $pass = 'AVNS_M21uXaWU19m7ty5wHd9';
 
-    // 1. 先用原生 PHP 測試 TCP 埠號通訊
-    $connection = @fsockopen($host, $port, $errno, $errstr, 5);
-    if (!$connection) {
-        return "<h1>TCP 連線失敗！</h1><p>無法連線至 {$host}:{$port}</p><p>錯誤訊息：{$errstr} ({$errno})</p>";
-    }
-    fclose($connection);
-
-    // 2. 用原生 PDO 測試 Aiven 認證
+    // 建立 PDO 連線並關閉 SSL 憑證核對 (ALLOW UNSAFE SSL)
     try {
         $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
         $pdo = new PDO($dsn, $user, $pass, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::MYSQL_ATTR_SSL_CA => true, // 忽略或啟用 SSL
+            PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false, // 停用伺服器憑證嚴格檢查
         ]);
     } catch (\PDOException $e) {
         return "<h1>Aiven PDO 連線失敗！</h1><pre>" . $e->getMessage() . "</pre>";
     }
 
-    // 3. 強制注入至 Laravel PDO 執行 Migration
+    // 注入連線並執行 Migration 建表
     try {
-        // 動態更換框架的預設連線物件
         \DB::purge('mysql');
         config([
             'database.default' => 'mysql',
@@ -44,13 +36,16 @@ Route::get('/init-db', function () {
                 'collation' => 'utf8mb4_unicode_ci',
                 'prefix' => '',
                 'strict' => false,
+                'options' => [
+                    PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false,
+                ],
             ]
         ]);
         \DB::reconnect('mysql');
 
         \Artisan::call('migrate', ['--force' => true]);
 
-        return '<h1>原生 PDO 與 Migration 均執行成功！</h1><pre>' . \Artisan::output() . '</pre>';
+        return '<h1>Aiven 資料庫 Migration 建表成功！</h1><pre>' . \Artisan::output() . '</pre>';
     } catch (\Exception $e) {
         return "<h1>Laravel Migration 失敗：</h1><pre>" . $e->getMessage() . "</pre>";
     }
