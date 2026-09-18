@@ -13,4 +13,4 @@ use App\Stat;
 |
 */
 
-Route::get('/', 'DpsController@overviewPage');
+Route::get('/', 'DpsController');
