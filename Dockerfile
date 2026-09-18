@@ -16,7 +16,8 @@ RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd opcache
 # 2. 啟用 Apache Rewrite 與設定預設環境
 RUN a2enmod rewrite
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
-    && sed -i 's/display_errors = On/display_errors = Off/g' "$PHP_INI_DIR/php.ini"
+    && sed -i 's/display_errors = On/display_errors = Off/g' "$PHP_INI_DIR/php.ini" \
+    && echo "error_reporting = E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED" >> "$PHP_INI_DIR/php.ini"
 
 # 3. 修改 Apache Document Root 指向 public
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
