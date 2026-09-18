@@ -12,5 +12,12 @@ use App\Stat;
 | contains the "web" middleware group. Now create something great!
 |
 */
+Route::get('/', 'DpsController@overviewPage');
 
-Route::get('/', 'DpsController');
+Route::get('/encounter/{stat}', function (Stat $stat) {
+    return view('encounter', ['stat' => $stat]);
+})->name('statDetail');
+
+Route::get('/shared/servertime', function () {
+    return response()->json(['serverTime' => time()]);
+});
