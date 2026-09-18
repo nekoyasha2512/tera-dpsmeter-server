@@ -16,7 +16,10 @@ RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd opcache
 
 # 2. 啟用 Apache mod_rewrite 模組 (Laravel 網址重寫必須)
 RUN a2enmod rewrite
-
+# 套用 PHP 正式環境設定 (關閉 display_errors)
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
+    && sed -i 's/display_errors = On/display_errors = Off/g' "$PHP_INI_DIR/php.ini" \
+    && sed -i 's/error_reporting = E_ALL/error_reporting = E_ALL \& ~E_DEPRECATED \& ~E_STRICT/g' "$PHP_INI_DIR/php.ini"
 # 3. 修改 Apache Document Root 指向 Laravel 的 public 目錄
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
